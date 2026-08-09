@@ -1,0 +1,7 @@
+
+##Biuld the Project###
+cd /home/cohent59/pattern_finder/subgraph_filter_suit
+source /usr/local/anaconda3/etc/profile.d/conda.sh
+conda activate sgf_fig1
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSGF_BUILD_CLI=ON
+cmake --build build -j4
