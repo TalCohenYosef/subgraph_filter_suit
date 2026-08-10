@@ -55,7 +55,7 @@ TMP_LIBRARY="$PROJECT_DIR/local_tests/figure1_toy_models/tmp_single_graph_librar
 
 READER_TYPE="json"
 PATTERN_OUTPUT_TYPE="json"
-SCORE_THRESHOLD="-3"
+SCORE_THRESHOLD="-30"
 PRIOR_POLICY="combined"
 
 mkdir -p "$RESULTS_DIR"
@@ -63,6 +63,15 @@ mkdir -p "$TMP_LIBRARY"
 
 SUMMARY_CSV="$RESULTS_DIR/summary.csv"
 TMP_SUMMARY="$RESULTS_DIR/summary.tmp"
+SUMMARY_TXT="$RESULTS_DIR/summary.txt"
+
+echo "S_NAME,smallest_matches,status" > "$SUMMARY_CSV"
+{
+    echo "Not found in G: pending"
+    echo "Graphs with no match in G: pending"
+    echo
+    echo "S graphs with matches > 0:"
+} > "$SUMMARY_TXT"
 
 # Keep a count of how many S graphs are not found in G.
 NOT_FOUND_COUNT=0
@@ -129,9 +138,6 @@ do
                     continue
                 fi
 
-                PATTERN_INDEX=$(basename "$PATTERN_FILE" .json)
-                PATTERN_INDEX=${PATTERN_INDEX#pattern_}
-
                 set +e
                 SEARCH_OUTPUT=$("$GRAPH_SEARCHER" \
                     --subgraph-path "$PATTERN_FILE" \
@@ -143,7 +149,6 @@ do
                 set -e
                 if [[ $SEARCH_EXIT -eq 0 && "$SEARCH_OUTPUT" =~ Matches[[:space:]]found:[[:space:]]*([0-9]+) ]]; then
                     MATCHES_FOUND="${BASH_REMATCH[1]}"
-                    S_MATCHED=1
                     if [[ -z "$BEST_MATCHES" || "$MATCHES_FOUND" -lt "$BEST_MATCHES" ]]; then
                         BEST_MATCHES="$MATCHES_FOUND"
                         BEST_PATTERN="$PATTERN_FILE"
@@ -156,13 +161,23 @@ do
     if [[ -n "$BEST_PATTERN" ]]; then
         cp "$BEST_PATTERN" "$OUT_DIR/smallest_pattern.json"
         echo "$BEST_MATCHES" > "$OUT_DIR/smallest_match_count.txt"
+        if [[ "$BEST_MATCHES" -gt 0 ]]; then
+            S_MATCHED=1
+        fi
     fi
 
-    # Keep only the selected pattern; the finder may also create an index CSV.
-    rm -f "$OUT_DIR"/pattern_*.json "$OUT_DIR"/pattern_index_*.csv
+    # Keep all generated patterns so they can be inspected after the run.
 
     if [[ $S_MATCHED -eq 0 ]]; then
         NOT_FOUND_COUNT=$((NOT_FOUND_COUNT + 1))
+        if [[ -n "$BEST_MATCHES" ]]; then
+            echo "$S_NAME,$BEST_MATCHES,not_found" >> "$SUMMARY_CSV"
+        else
+            echo "$S_NAME,,not_found" >> "$SUMMARY_CSV"
+        fi
+    else
+        echo "$S_NAME,$BEST_MATCHES,found" >> "$SUMMARY_CSV"
+        echo "$S_NAME: $BEST_MATCHES matches" >> "$SUMMARY_TXT"
     fi
 
     count=$((count + 1))
@@ -176,3 +191,18 @@ echo
 printf 'Not found in G: %d\n' "$NOT_FOUND_COUNT"
 echo "Finished."
 echo "Graphs with no match in G: $NOT_FOUND_COUNT"
+
+TOTAL_GRAPHS=$count
+FOUND_COUNT=$((TOTAL_GRAPHS - NOT_FOUND_COUNT))
+{
+    echo "Not found in G: $NOT_FOUND_COUNT"
+    echo "Finished."
+    echo "Graphs with no match in G: $NOT_FOUND_COUNT"
+    echo "Graphs with matches > 0: $FOUND_COUNT"
+    echo
+    echo "S graphs with matches > 0:"
+    awk -F, 'NR > 1 && $3 == "found" { print $1 ": " $2 " matches" }' "$SUMMARY_CSV"
+} > "$SUMMARY_TXT"
+
+echo "Summary CSV: $SUMMARY_CSV"
+echo "Summary text: $SUMMARY_TXT"

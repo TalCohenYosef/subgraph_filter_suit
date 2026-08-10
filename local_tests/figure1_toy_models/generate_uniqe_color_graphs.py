@@ -10,11 +10,13 @@ random.seed(SEED)
 BASE_DIR = Path(__file__).resolve().parent
 
 
-def generate_gnp_edges(n, p):
+def generate_gnp_edges(n, p, colors=None):
     edges = []
 
     for u in range(n):
         for v in range(u + 1, n):
+            if colors is not None and {colors[u], colors[v]} == {2, 3}:
+                continue
             if random.random() < p:
                 edges.append((u, v))
 
@@ -56,12 +58,14 @@ def generate_unique_color():
     n_g = 1000
     p_g = 0.003
 
-    colors_g = [
-        random.choice([0, 1])
-        for _ in range(n_g)
-    ]
+    colors_g = random.choices(
+        population=[0, 1, 2, 3],
+        weights=[0.45, 0.45, 0.05, 0.05],
+        k=n_g
+    )
 
-    edges_g = generate_gnp_edges(n_g, p_g)
+    # Do not allow an edge between a color-2 vertex and a color-3 vertex.
+    edges_g = generate_gnp_edges(n_g, p_g, colors_g)
 
     save_graph(
         dataset_dir / "G.json",

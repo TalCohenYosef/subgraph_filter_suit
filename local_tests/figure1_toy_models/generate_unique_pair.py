@@ -35,48 +35,75 @@ def save_graph(path, colors, edges):
         json.dump(graph, f)
 
 
-def generate_uniform_colors(n):
-    return [
-        random.choice([0, 1])
-        for _ in range(n)
-    ]
+def generate_g_colors(n):
+    return random.choices(
+        population=[0, 1, 2, 3],
+        weights=[0.45, 0.45, 0.05, 0.05],
+        k=n
+    )
 
 
-def generate_same_color_edges(colors, p):
-    """
-    Generate edges independently with probability p,
-    but ONLY between vertices having the same color.
-    """
-
+def generate_gnp_edges(n, p, colors=None, excluded_edge=None):
+    """Generate an undirected G(n,p) graph with independent edge trials."""
     edges = []
-    n = len(colors)
 
     for u in range(n):
         for v in range(u + 1, n):
-
-            if colors[u] != colors[v]:
+            if excluded_edge == (u, v):
                 continue
-
+            if colors is not None and {colors[u], colors[v]} == {2, 3}:
+                continue
             if random.random() < p:
                 edges.append((u, v))
 
     return edges
 
 
+def generate_connected_gnp_edges(n, p, colors):
+    """Generate G(n,p), adding permitted edges until it is connected."""
+    edges = set(generate_gnp_edges(n, p, colors=colors))
+    components = [{vertex} for vertex in range(n)]
+
+    for u, v in edges:
+        left = next(component for component in components if u in component)
+        right = next(component for component in components if v in component)
+        if left is not right:
+            left.update(right)
+            components.remove(right)
+
+    while len(components) > 1:
+        left = components[0]
+        right_index = next(
+            index for index, right in enumerate(components[1:], start=1)
+            if any({colors[u], colors[v]} != {2, 3}
+                   for u in left for v in right)
+        )
+        right = components[right_index]
+        u = next(u for u in left for v in right
+                 if {colors[u], colors[v]} != {2, 3})
+        v = next(v for v in right if {colors[u], colors[v]} != {2, 3})
+        edges.add((min(u, v), max(u, v)))
+        left.update(right)
+        components.remove(right)
+
+    return list(edges)
+
+
 def generate_background():
     """
     G:
         n = 1000
-        colors = {0,1} uniformly
-        same-color edges only
+        colors sampled with probabilities
+        P(0)=0.45, P(1)=0.45, P(2)=0.05, P(3)=0.05
+        all permitted edges sampled independently
         p = 0.003
     """
 
     n_g = 1000
     p_g = 0.003
 
-    colors = generate_uniform_colors(n_g)
-    edges = generate_same_color_edges(colors, p_g)
+    colors = generate_g_colors(n_g)
+    edges = generate_connected_gnp_edges(n_g, p_g, colors)
 
     save_graph(
         DATASET_DIR / "G.json",
@@ -91,6 +118,8 @@ def generate_background():
     print(f"Vertices: {n_g}")
     print(f"Color 0:  {n0}")
     print(f"Color 1:  {n1}")
+    print(f"Color 2:  {colors.count(2)}")
+    print(f"Color 3:  {colors.count(3)}")
     print(f"Edges:    {len(edges)}")
 
 
@@ -99,9 +128,9 @@ def generate_queries():
     Each S_i:
         n = 30
         colors = {0,1} uniformly
-        same-color edges only with p = 0.1
+        all edges sampled independently with p = 0.1
 
-    Then plant exactly one 0-1 edge.
+    Then plant exactly one edge between a color-2 vertex and a color-3 vertex.
     """
 
     n_s = 30
@@ -111,38 +140,16 @@ def generate_queries():
 
     for i in range(1, N_QUERIES + 1):
 
-        # Very unlikely, but make sure both colors exist.
-        while True:
-            colors = generate_uniform_colors(n_s)
+        colors = [
+            random.choice([0, 1])
+            for _ in range(n_s)
+        ]
+        u, v = sorted(random.sample(range(n_s), 2))
+        colors[u] = 2
+        colors[v] = 3
 
-            color_0_vertices = [
-                v for v, c in enumerate(colors)
-                if c == 0
-            ]
-
-            color_1_vertices = [
-                v for v, c in enumerate(colors)
-                if c == 1
-            ]
-
-            if color_0_vertices and color_1_vertices:
-                break
-
-        # Initially ONLY same-color edges.
-        edges = generate_same_color_edges(
-            colors,
-            p_s
-        )
-
-        # ----------------------------------------------------
-        # Plant the unique cross-color pair
-        # ----------------------------------------------------
-
-        u = random.choice(color_0_vertices)
-        v = random.choice(color_1_vertices)
-
-        # This edge cannot already exist because initially
-        # cross-color edges are forbidden.
+        # Sample every other edge independently, then plant the unique 2-3 edge.
+        edges = generate_gnp_edges(n_s, p_s, excluded_edge=(u, v))
         edges.append((u, v))
 
         save_graph(
