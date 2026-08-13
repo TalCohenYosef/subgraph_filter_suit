@@ -55,7 +55,7 @@ TMP_LIBRARY="$PROJECT_DIR/local_tests/figure1_toy_models/tmp_single_graph_librar
 
 READER_TYPE="json"
 PATTERN_OUTPUT_TYPE="json"
-SCORE_THRESHOLD="-30"
+SCORE_THRESHOLD="-8"
 PRIOR_POLICY="combined"
 
 mkdir -p "$RESULTS_DIR"
