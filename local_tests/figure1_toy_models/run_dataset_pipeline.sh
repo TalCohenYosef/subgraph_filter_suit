@@ -4,12 +4,17 @@ set -euo pipefail
 
 # ============================================================
 # Usage:
-#   ./run_dataset_pipeline.sh <DATASET_DIR> <RESULTS_DIR> [S_NAME]
+#   ./run_dataset_pipeline.sh <DATASET_DIR> <RESULTS_DIR> [options]
+#
+# Options:
+#   --score-threshold VALUE   Pattern Finder score cutoff (default: -15)
+#   --required-pattern-size K Require the selected pattern to have exactly K vertices
+#   --s-name S_NAME           Process one graph only (for example S_1)
 #
 # ============================================================
 
 if [[ $# -lt 2 ]]; then
-    echo "Usage: $0 <DATASET_DIR> <RESULTS_DIR> [S_NAME]"
+    echo "Usage: $0 <DATASET_DIR> <RESULTS_DIR> [--score-threshold VALUE] [--required-pattern-size K] [--s-name S_NAME]"
     exit 1
 fi
 
@@ -20,7 +25,40 @@ GRAPH_SEARCHER="$PROJECT_DIR/build/sgf-graph-searcher"
 
 DATASET_DIR="$1"
 RESULTS_DIR="$2"
-ONLY_S_NAME="${3:-}"
+shift 2
+
+SCORE_THRESHOLD="-15"
+REQUIRED_PATTERN_SIZE=""
+ONLY_S_NAME=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --score-threshold)
+            [[ $# -ge 2 ]] || { echo "Error: --score-threshold needs a value" >&2; exit 1; }
+            SCORE_THRESHOLD="$2"
+            shift 2
+            ;;
+        --required-pattern-size)
+            [[ $# -ge 2 ]] || { echo "Error: --required-pattern-size needs a value" >&2; exit 1; }
+            REQUIRED_PATTERN_SIZE="$2"
+            shift 2
+            ;;
+        --s-name)
+            [[ $# -ge 2 ]] || { echo "Error: --s-name needs a value" >&2; exit 1; }
+            ONLY_S_NAME="$2"
+            shift 2
+            ;;
+        *)
+            echo "Error: unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -n "$REQUIRED_PATTERN_SIZE" ]] && ! [[ "$REQUIRED_PATTERN_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+    echo "Error: --required-pattern-size must be a positive integer" >&2
+    exit 1
+fi
 
 shopt -s nullglob
 
@@ -51,21 +89,23 @@ if [[ ${#S_FILES[@]} -eq 0 ]]; then
     exit 1
 fi
 
-TMP_LIBRARY="$PROJECT_DIR/local_tests/figure1_toy_models/tmp_single_graph_library"
+TMP_LIBRARY=$(mktemp -d /tmp/sgf_figure1_library.XXXXXX)
+cleanup_tmp_library() {
+    rm -rf "$TMP_LIBRARY"
+}
+trap cleanup_tmp_library EXIT
 
 READER_TYPE="json"
 PATTERN_OUTPUT_TYPE="json"
-SCORE_THRESHOLD="-8"
 PRIOR_POLICY="combined"
 
 mkdir -p "$RESULTS_DIR"
-mkdir -p "$TMP_LIBRARY"
 
 SUMMARY_CSV="$RESULTS_DIR/summary.csv"
 TMP_SUMMARY="$RESULTS_DIR/summary.tmp"
 SUMMARY_TXT="$RESULTS_DIR/summary.txt"
 
-echo "S_NAME,smallest_matches,status" > "$SUMMARY_CSV"
+echo "S_NAME,best_matches,pattern_size,status" > "$SUMMARY_CSV"
 {
     echo "Not found in G: pending"
     echo "Graphs with no match in G: pending"
@@ -105,7 +145,6 @@ do
     rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR"
 
-    rm -f "$TMP_LIBRARY"/*.json
     cp "$S_PATH" "$TMP_LIBRARY/"
 
     # --------------------------------------------------------
@@ -128,6 +167,7 @@ do
     S_MATCHED=0
     BEST_MATCHES=""
     BEST_PATTERN=""
+    BEST_PATTERN_SIZE=""
 
     if [[ $FINDER_EXIT -eq 0 ]]; then
         PATTERN_FILES=("$OUT_DIR"/pattern_*.json)
@@ -138,6 +178,7 @@ do
                     continue
                 fi
 
+                PATTERN_SIZE=$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["nodes"]))' "$PATTERN_FILE")
                 set +e
                 SEARCH_OUTPUT=$("$GRAPH_SEARCHER" \
                     --subgraph-path "$PATTERN_FILE" \
@@ -149,9 +190,10 @@ do
                 set -e
                 if [[ $SEARCH_EXIT -eq 0 && "$SEARCH_OUTPUT" =~ Matches[[:space:]]found:[[:space:]]*([0-9]+) ]]; then
                     MATCHES_FOUND="${BASH_REMATCH[1]}"
-                    if [[ -z "$BEST_MATCHES" || "$MATCHES_FOUND" -lt "$BEST_MATCHES" ]]; then
+                    if [[ -z "$BEST_MATCHES" || "$MATCHES_FOUND" -lt "$BEST_MATCHES" || ( "$MATCHES_FOUND" -eq "$BEST_MATCHES" && "$PATTERN_SIZE" -lt "$BEST_PATTERN_SIZE" ) ]]; then
                         BEST_MATCHES="$MATCHES_FOUND"
                         BEST_PATTERN="$PATTERN_FILE"
+                        BEST_PATTERN_SIZE="$PATTERN_SIZE"
                     fi
                 fi
             done
@@ -159,8 +201,9 @@ do
     fi
 
     if [[ -n "$BEST_PATTERN" ]]; then
-        cp "$BEST_PATTERN" "$OUT_DIR/smallest_pattern.json"
-        echo "$BEST_MATCHES" > "$OUT_DIR/smallest_match_count.txt"
+        cp "$BEST_PATTERN" "$OUT_DIR/best_pattern.json"
+        echo "$BEST_MATCHES" > "$OUT_DIR/best_match_count.txt"
+        echo "$BEST_PATTERN_SIZE" > "$OUT_DIR/best_pattern_size.txt"
         if [[ "$BEST_MATCHES" -gt 0 ]]; then
             S_MATCHED=1
         fi
@@ -171,14 +214,18 @@ do
     if [[ $S_MATCHED -eq 0 ]]; then
         NOT_FOUND_COUNT=$((NOT_FOUND_COUNT + 1))
         if [[ -n "$BEST_MATCHES" ]]; then
-            echo "$S_NAME,$BEST_MATCHES,not_found" >> "$SUMMARY_CSV"
+            echo "$S_NAME,$BEST_MATCHES,$BEST_PATTERN_SIZE,not_found" >> "$SUMMARY_CSV"
         else
-            echo "$S_NAME,,not_found" >> "$SUMMARY_CSV"
+            echo "$S_NAME,,,error" >> "$SUMMARY_CSV"
         fi
     else
-        echo "$S_NAME,$BEST_MATCHES,found" >> "$SUMMARY_CSV"
+        echo "$S_NAME,$BEST_MATCHES,$BEST_PATTERN_SIZE,found" >> "$SUMMARY_CSV"
         echo "$S_NAME: $BEST_MATCHES matches" >> "$SUMMARY_TXT"
     fi
+
+    # Keep only the selected pattern and its compact metadata for this S_i.
+    rm -f "$OUT_DIR"/pattern_*.json "$OUT_DIR"/pattern_index_*.csv
+    rm -f "$TMP_LIBRARY"/*.json
 
     count=$((count + 1))
 
@@ -201,8 +248,22 @@ FOUND_COUNT=$((TOTAL_GRAPHS - NOT_FOUND_COUNT))
     echo "Graphs with matches > 0: $FOUND_COUNT"
     echo
     echo "S graphs with matches > 0:"
-    awk -F, 'NR > 1 && $3 == "found" { print $1 ": " $2 " matches" }' "$SUMMARY_CSV"
+    awk -F, 'NR > 1 && $4 == "found" { print $1 ": " $2 " matches" }' "$SUMMARY_CSV"
 } > "$SUMMARY_TXT"
+
+{
+    echo "score_threshold=$SCORE_THRESHOLD"
+    echo "required_pattern_size=$REQUIRED_PATTERN_SIZE"
+    echo "total_graphs=$TOTAL_GRAPHS"
+} > "$RESULTS_DIR/run_config.txt"
 
 echo "Summary CSV: $SUMMARY_CSV"
 echo "Summary text: $SUMMARY_TXT"
+
+if [[ -n "$REQUIRED_PATTERN_SIZE" ]]; then
+    SIZE_MISMATCHES=$(awk -F, -v k="$REQUIRED_PATTERN_SIZE" 'NR > 1 && $3 != k {count++} END {print count+0}' "$SUMMARY_CSV")
+    echo "Patterns with size different from k=$REQUIRED_PATTERN_SIZE: $SIZE_MISMATCHES"
+    if [[ "$SIZE_MISMATCHES" -gt 0 ]]; then
+        exit 2
+    fi
+fi

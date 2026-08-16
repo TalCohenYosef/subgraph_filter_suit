@@ -156,6 +156,7 @@ gamma,2
   --library-dir ./graphs/library \
   --cache-dir ./cache \
   --cache-type binary
+  
 # Writes: ./cache/color_map_2026-06-15_12-00-00.csv
 
 # Step 2 — filter (load the saved map so IDs are consistent with the cache)

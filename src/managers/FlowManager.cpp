@@ -52,6 +52,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 namespace sgf
 {
@@ -485,6 +486,7 @@ FlowManager::load_graph_enumeration(CacheManagerType manager_type, const std::st
 
     const std::unordered_map<std::string, EnumerationResult> result =
         cache_manager->read(motif_file.stem().string());
+
     std::vector<std::string> ordered_graph_names;
     EnumerationResultVector ordered_enumeration;
     ordered_graph_names.reserve(result.size());
@@ -524,6 +526,18 @@ std::unordered_map<std::string, FilterResult> FlowManager::run_enumeration_filte
     std::unordered_map<std::string, FilterResult> filter_results;
     const std::unordered_map<std::string, EnumerationResult> library_enumeration =
         lib_cache_manager.read(lib_cache_path);
+
+    std::cout << "Printing enumeration result for graph S_588" << std::endl;
+    const auto graph_it = library_enumeration.find("/home/cohent59/pattern_finder/subgraph_filter_suit/local_tests/figure1_toy_models/unique_color/S_graphs/S_588.json");
+    if (graph_it != library_enumeration.end())
+    {
+        std::cout << graph_it->second.size() << std::endl;
+        for (const auto& [motif, appearances] : graph_it->second)
+        {
+            std::cout << "Motif: " << motif << " Appearances: " << appearances << std::endl;
+        }
+    }
+
     std::vector<std::string> library_graph_names;
     EnumerationResultVector library_enumeration_vector;
     for (const auto& graph_data : library_enumeration)

@@ -59,6 +59,33 @@ def generate_gnp_edges(n, p, colors=None, excluded_edge=None):
     return edges
 
 
+def connect_graph(n, edges):
+    """Add the minimum number of edges needed to connect the graph."""
+    adjacency = [[] for _ in range(n)]
+    for u, v in edges:
+        adjacency[u].append(v)
+        adjacency[v].append(u)
+
+    representatives = []
+    visited = set()
+    for start in range(n):
+        if start in visited:
+            continue
+        representatives.append(start)
+        visited.add(start)
+        stack = [start]
+        while stack:
+            u = stack.pop()
+            for v in adjacency[u]:
+                if v not in visited:
+                    visited.add(v)
+                    stack.append(v)
+
+    for u, v in zip(representatives, representatives[1:]):
+        edges.append((u, v))
+    return edges
+
+
 def generate_connected_gnp_edges(n, p, colors):
     """Generate G(n,p), adding permitted edges until it is connected."""
     edges = set(generate_gnp_edges(n, p, colors=colors))
@@ -151,6 +178,7 @@ def generate_queries():
         # Sample every other edge independently, then plant the unique 2-3 edge.
         edges = generate_gnp_edges(n_s, p_s, excluded_edge=(u, v))
         edges.append((u, v))
+        edges = connect_graph(n_s, edges)
 
         save_graph(
             S_DIR / f"S_{i}.json",

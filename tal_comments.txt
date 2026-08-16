@@ -14,4 +14,6 @@ conda activate sgf_fig1
 
 ##command line run dataset pipline##
 
+permission - cd /home/cohent59/pattern_finder/subgraph_filter_suit/local_tests/figure1_toy_models
+chmod +x run_dataset_pipeline.sh
 run_dataset_pipeline.sh <DATASET_DIR> <RESULTS_DIR> [S_NAME]

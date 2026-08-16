@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <ostream>
+#include <string>
 
 #ifdef __CUDACC__
 #define SGF_HD __host__ __device__
@@ -205,6 +207,23 @@ struct UInt128
         return result;
     }
 
+    SGF_HD std::string to_string()
+    {
+        std::string digits;
+        uint64_t value = m_low;
+        while (value > 10)
+        {
+            digits = static_cast<char>('0' + value % 10U) + digits;
+            value /= 10U;
+        }
+        value += m_high;
+        while (value > 10)
+        {
+            digits = (static_cast<char>('0' + value % 10U)) + digits;
+            value /= 10U;
+        }
+        return digits;
+    }
     // ── Shift ─────────────────────────────────────────────────────────────────
 
     /**
@@ -382,6 +401,32 @@ struct UInt128
         return copy.divmod_uint32(divisor);
     }
 };
+
+/**
+ * @brief Write a UInt128 as an unsigned decimal number.
+ * @param stream Output stream.
+ * @param value Value to write.
+ * @return The output stream.
+ */
+inline std::ostream& operator<<(std::ostream& stream, UInt128 value)
+{
+    if (!value)
+    {
+        return stream << '0';
+    }
+
+    std::string digits;
+    while (value)
+    {
+        digits.push_back(static_cast<char>('0' + value % 10U));
+        value /= 10U;
+    }
+    for (auto it = digits.rbegin(); it != digits.rend(); ++it)
+    {
+        stream << *it;
+    }
+    return stream;
+}
 
 /**
  * @brief Hash functor for UInt128.

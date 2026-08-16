@@ -1,0 +1,41 @@
+Not found in G: 965
+Finished.
+Graphs with no match in G: 965
+Graphs with matches > 0: 35
+
+S graphs with matches > 0:
+S_30: 1 matches
+S_39: 1 matches
+S_129: 1 matches
+S_204: 1 matches
+S_211: 1 matches
+S_269: 1 matches
+S_300: 1 matches
+S_355: 1 matches
+S_363: 1 matches
+S_375: 1 matches
+S_414: 1 matches
+S_520: 1 matches
+S_524: 1 matches
+S_532: 1 matches
+S_583: 1 matches
+S_588: 1 matches
+S_616: 1 matches
+S_620: 1 matches
+S_634: 1 matches
+S_640: 1 matches
+S_649: 1 matches
+S_675: 1 matches
+S_680: 1 matches
+S_699: 1 matches
+S_745: 1 matches
+S_800: 1 matches
+S_815: 1 matches
+S_833: 1 matches
+S_862: 1 matches
+S_874: 1 matches
+S_893: 1 matches
+S_897: 1 matches
+S_909: 1 matches
+S_939: 1 matches
+S_972: 1 matches

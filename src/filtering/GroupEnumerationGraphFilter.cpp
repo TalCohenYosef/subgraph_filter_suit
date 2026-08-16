@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <iostream>
 
 namespace sgf
 {
@@ -36,6 +37,12 @@ FilterResult GroupEnumerationGraphFilter::filter(const EnumerationResult& graph_
                 (graph_feature_appearences_iter != graph_features.end())
                     ? graph_feature_appearences_iter->second
                     : 0U;
+            // if (motif_key == UInt128(47244640512, 281474993487874))
+            // {
+            //     std::cout << library_graph_index 
+            //               << " motif_appearences: " << motif_appearences << 
+            //               " graph feature appearances: " << graph_feature_appearences << std::endl;
+            // }
             if (graph_feature_appearences < motif_appearences)
             {
                 can_graph_be_filtered[library_graph_index] = true;

@@ -1,0 +1,14 @@
+Not found in G: 992
+Finished.
+Graphs with no match in G: 992
+Graphs with matches > 0: 8
+
+S graphs with matches > 0:
+S_70: 1 matches
+S_211: 1 matches
+S_269: 1 matches
+S_375: 1 matches
+S_385: 1 matches
+S_588: 1 matches
+S_670: 1 matches
+S_862: 1 matches

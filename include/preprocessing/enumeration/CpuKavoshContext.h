@@ -34,6 +34,7 @@ struct CpuKavoshContext : IKavoshContext
     std::vector<int64_t>& m_bfs_visited;         ///< BFS depth-encoding array.
     const std::vector<uint32_t>& m_order_index;  ///< Vertex position in degree-sorted order.
     AddMotifFn m_add_motif_fn;  ///< Set by MotifPreprocessor to cpu_add_motif_to_count.
+    LoggerHandler m_logger;     ///< Logger used by debug motif instrumentation.
 
     /**
      * @brief Construct a context, binding all reference members.
@@ -50,13 +51,14 @@ struct CpuKavoshContext : IKavoshContext
     CpuKavoshContext(const int64_t run_id, const uint32_t root, const MotifCanonical* canonical,
                      const uint32_t canonical_size, const ColoredGraph& graph,
                      EnumerationResult& result, std::vector<int64_t>& bfs_visited,
-                     const std::vector<uint32_t>& order_index, const AddMotifFn add_motif_fn)
+                     const std::vector<uint32_t>& order_index, const AddMotifFn add_motif_fn, LoggerHandler logger)
         : IKavoshContext{run_id, root, canonical, canonical_size}
         , m_graph(graph)
         , m_result(result)
         , m_bfs_visited(bfs_visited)
         , m_order_index(order_index)
         , m_add_motif_fn(add_motif_fn)
+        , m_logger(logger)
     {
     }
 

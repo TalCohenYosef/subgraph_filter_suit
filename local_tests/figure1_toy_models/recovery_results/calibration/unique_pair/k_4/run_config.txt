@@ -1,0 +1,3 @@
+score_threshold=-27
+required_pattern_size=4
+total_graphs=1

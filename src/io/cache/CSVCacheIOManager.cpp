@@ -19,7 +19,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#include <iostream>
 namespace sgf
 {
 
@@ -112,6 +112,10 @@ void CSVCacheIOManager::insert_row(const std::string& line,
     std::getline(stream, graph_name, ',');
     std::getline(stream, motif_str, ',');
     std::getline(stream, appearances_str);
+    if (graph_name == "/home/cohent59/pattern_finder/subgraph_filter_suit/local_tests/figure1_toy_models/unique_color/S_graphs/S_588.json")
+    {
+        std::cout << graph_name << " " << motif_str << " " << appearances_str << std::endl;
+    }
     const UInt128 motif_key = decimal_to_uint128(motif_str);
     const uint32_t appearances = static_cast<uint32_t>(std::stoul(appearances_str));
     data[graph_name][motif_key] = appearances;

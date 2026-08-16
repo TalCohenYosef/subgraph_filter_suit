@@ -1,6 +1,0 @@
-Not found in G: 1000
-Finished.
-Graphs with no match in G: 1000
-Graphs with matches > 0: 0
-
-S graphs with matches > 0:

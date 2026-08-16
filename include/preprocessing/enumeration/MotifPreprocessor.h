@@ -101,7 +101,7 @@ public:
      */
     SGF_HD static UInt128 calculate_motif_number_from_arrays(
         uint32_t descriptor, const std::array<uint32_t, SgfConstants::MOTIF_SIZE>& node_colors,
-        const MotifCanonical* canonical_array, uint32_t canonical_size) noexcept;
+        const MotifCanonical* canonical_array, uint32_t canonical_size, LoggerHandler logger) noexcept;
 
 protected:
     /**
@@ -749,7 +749,7 @@ SGF_HD void MotifPreprocessor::emit_depth_1_2_3_for_third_vertex(
 // NOLINTNEXTLINE(readability-function-size)
 inline SGF_HD UInt128 MotifPreprocessor::calculate_motif_number_from_arrays(
     const uint32_t descriptor, const std::array<uint32_t, SgfConstants::MOTIF_SIZE>& node_colors,
-    const MotifCanonical* const canonical_array, const uint32_t canonical_size) noexcept
+    const MotifCanonical* const canonical_array, const uint32_t canonical_size, LoggerHandler logger) noexcept
 {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     if (descriptor >= canonical_size || canonical_array[descriptor].m_permutation_count == 0U)
@@ -772,6 +772,21 @@ inline SGF_HD UInt128 MotifPreprocessor::calculate_motif_number_from_arrays(
         {
             minimal_colors = encoded;
         }
+    }
+    bool color_two = false;
+    for (uint32_t color : node_colors)
+    {
+        if (color == 2U)
+        {
+            color_two = true;
+            break;
+        }
+    }
+    if (color_two)
+    {
+        logger.log(LogLevel::WARNING, ((UInt128{static_cast<uint64_t>(canonical.m_minimal_motif_num)}
+            << static_cast<uint32_t>(SgfConstants::MOTIF_SIZE * SgfConstants::BITS_PER_COLOR)) |
+           minimal_colors).to_string());
     }
     return (UInt128{static_cast<uint64_t>(canonical.m_minimal_motif_num)}
             << static_cast<uint32_t>(SgfConstants::MOTIF_SIZE * SgfConstants::BITS_PER_COLOR)) |
@@ -799,7 +814,7 @@ SGF_HD void MotifPreprocessor::count_group_by_ids(KavoshContext& ctx, const uint
         ctx.m_graph.get_vertex_color(group[0U]), ctx.m_graph.get_vertex_color(group[1U]),
         ctx.m_graph.get_vertex_color(group[2U]), ctx.m_graph.get_vertex_color(group[3U])};
     const UInt128 motif_id =
-        calculate_motif_number_from_arrays(desc, colors, ctx.m_canonical, ctx.m_canonical_size);
+        calculate_motif_number_from_arrays(desc, colors, ctx.m_canonical, ctx.m_canonical_size, ctx.m_logger);
     ctx.m_add_motif_fn(ctx, motif_id);
 }
 

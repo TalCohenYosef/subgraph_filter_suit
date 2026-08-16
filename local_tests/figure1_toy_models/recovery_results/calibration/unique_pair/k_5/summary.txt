@@ -1,0 +1,6 @@
+Not found in G: 1
+Finished.
+Graphs with no match in G: 1
+Graphs with matches > 0: 0
+
+S graphs with matches > 0:

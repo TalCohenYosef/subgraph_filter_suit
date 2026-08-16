@@ -250,7 +250,8 @@ void MotifPreprocessor::stream_groups_to_counter_for_vertex(
                          result,
                          bfs_visited_vertices,
                          m_order_index,
-                         cpu_add_motif_to_count};
+                         cpu_add_motif_to_count,
+                         m_logger};
     ctx.mark_neighbours(depth_one, BFS_DEPTH_ONE_OFFSET);
     emit_depth_1_1_1_groups_cpu(ctx, depth_one);
     emit_depth_1_1_2_and_1_2_2_groups_cpu(ctx, depth_one);

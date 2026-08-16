@@ -23,6 +23,34 @@ def generate_gnp_edges(n, p, colors=None):
     return edges
 
 
+def connect_graph(n, edges):
+    """Add the minimum number of edges needed to connect the graph."""
+    adjacency = [[] for _ in range(n)]
+    for u, v in edges:
+        adjacency[u].append(v)
+        adjacency[v].append(u)
+
+    representatives = []
+    visited = set()
+    for start in range(n):
+        if start in visited:
+            continue
+        representatives.append(start)
+        visited.add(start)
+        stack = [start]
+        while stack:
+            u = stack.pop()
+            for v in adjacency[u]:
+                if v not in visited:
+                    visited.add(v)
+                    stack.append(v)
+
+    for u, v in zip(representatives, representatives[1:]):
+        edges.append((u, v))
+
+    return edges
+
+
 def save_graph(path, colors, edges):
     graph = {
         "nodes": [
@@ -58,14 +86,15 @@ def generate_unique_color():
     n_g = 1000
     p_g = 0.003
 
+    # Color 2 is reserved for the planted vertex and must be absent from G.
     colors_g = random.choices(
-        population=[0, 1, 2, 3],
-        weights=[0.45, 0.45, 0.05, 0.05],
+        population=[0, 1, 3],
+        weights=[0.475, 0.475, 0.05],
         k=n_g
     )
 
     # Do not allow an edge between a color-2 vertex and a color-3 vertex.
-    edges_g = generate_gnp_edges(n_g, p_g, colors_g)
+    edges_g = connect_graph(n_g, generate_gnp_edges(n_g, p_g, colors_g))
 
     save_graph(
         dataset_dir / "G.json",
@@ -94,7 +123,7 @@ def generate_unique_color():
             for _ in range(n_s)
         ]
 
-        edges_s = generate_gnp_edges(n_s, p_s)
+        edges_s = connect_graph(n_s, generate_gnp_edges(n_s, p_s))
 
         # Plant the unique color
         planted_vertex = random.randrange(n_s)
